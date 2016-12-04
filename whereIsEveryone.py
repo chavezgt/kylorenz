@@ -1,71 +1,68 @@
-from telegram.ext import Updater
-from telegram import InlineKeyboardButton
-from telegram.inlinekeyboardmarkup import InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.forcereply import ForceReply
-from telegram.ext import CommandHandler, MessageHandler, Filters
-import requests
-from threading import Timer
 
+# Global variables
 baseUrl = 'https://maps.googleapis.com/maps/api/staticmap'
-updater = Updater(token='320338185:AAE2toXmrb-EKXPFNW_EoJoJ5CGY3tUzi0A')
 key = 'AIzaSyBC9KPbyRovhnqIHhhLm460aphgzi65kxk'
 
-force_reply = ForceReply(
-        force_reply=True,
-        selective = True
-        )
-gathering = False
 locationArray = []
 
 def start(bot, update):
     bot.sendMessage(chat_id=update.message.chat_id,
-            text="Ok, I'll need to gather all of your locations, if you want"
-            +"to participate, send me the command /me")
+        text="Ok, I'll need to gather all of your locations, if you want"
+        + " to participate, send me the command /me")
     gatherLoc(bot,update.message.chat_id)
 
 def askLoc(bot, update):
     user = update.message.from_user.first_name
     
     bot.sendMessage(chat_id=update.message.chat_id, 
-            reply_markup=force_reply,
-            reply_to_message_id=update.message.message_id,
-            text="Send me your location, " + user)
+        reply_markup=ForceReply(force_reply=True, selective = True),
+        reply_to_message_id=update.message.message_id,
+        text="Send me your location, " + user)
 
 def getLoc(bot, update):
-            userName = update.message.from_user.first_name
-            userId  = update.message.from_user.id
-            longitude = update.message.location.longitude 
-            latitude  = update.message.location.latitude 
-            addLocToArr(userId, userName, longitude, latitude)
+    userName = update.message.from_user.first_name
+    userId  = update.message.from_user.id
+    longitude = update.message.location.longitude
+    latitude  = update.message.location.latitude
+
+    addLocToArr(userId, userName, longitude, latitude)
 
 def addLocToArr(userId, userName, longitude, latitude):
-    global gathering
     global locationAarray
-    locObj = {"id" : userId,
-              "userName": userName,
-              "longitude" : longitude,
-              "latitude"  : latitude}
+    
+    locObj = {
+        "id" : userId,
+        "userName": userName,
+        "longitude" : longitude,
+        "latitude"  : latitude
+    }
 
-    if(gathering):
-        if locObj["id"] not  in [obj["id"] for obj in locationArray]:
-            locationArray.append(locObj)
-        else:
-            upD =[ obj for obj in locationArray if obj["id"] == locObj["id"]][0]
-            upD["latitude"] = locObj["latitude"]
-            upD["longitude"] = locObj["longitude"]
+    upD = [obj for obj in locationArray if obj["id"] == locObj["id"]]
+        
+    if len(upD) == 0:
+        locationArray.append(locObj)
+        print("Added " + locObj["username"]
+            + " at location " + str(locObj["longitude"])
+            + ", " + str(locObj["latitude"]))
+    else:
+        upD[0]["latitude"] = locObj["latitude"]
+        upD[0]["longitude"] = locObj["longitude"]
+        print("Updated location of " + upD[0]["userName"]
+            + " to " + str(upD[0]["latitude"])
+            + ", " + str(upD[0]["longitude"]))
             
-    print("added " + str(locObj))
-    #ADD ERROR MANAGEMENT in case it doesn't work
+    # TODO: Add error management in case it doesn't work
 
 def calculateCentrum():
-       maxY = max([obj["longitude"] for obj in locationArray] )
-       minY = min([obj["longitude"] for obj in locationArray] )
-       maxX = max([obj["latitude"] for obj in locationArray] )
-       minX = min([obj["latitude"] for obj in locationArray] )
-       centerY = (maxY + minY )/2
-       centerX = (maxX + minX )/2
-       return [centerX, centerY]
-
+    maxY = max([obj["longitude"] for obj in locationArray])
+    minY = min([obj["longitude"] for obj in locationArray])
+    maxX = max([obj["latitude"] for obj in locationArray])
+    minX = min([obj["latitude"] for obj in locationArray])
+    centerY = (maxY + minY) / 2
+    centerX = (maxX + minX) / 2
+    return [centerX, centerY]
 
 def constructUrl():
     url = baseUrl + '?'
@@ -78,8 +75,8 @@ def constructUrl():
     url += '&'
     url += 'key=' + key
     url += '&'
-    #label name
-    #add all the longs and lats for each location object
+
+    # Add all the longs and lats for each location object
     for obj in locationArray:
         url += 'markers=color:blue%7Clabel:'
         url += str(obj["userName"])[0].upper()
@@ -88,38 +85,33 @@ def constructUrl():
         url += ','
         url += str(obj["longitude"])
         url += '&'
-        
 
     return url
 
 def giveLocs(bot,update):
     url=constructUrl()
-    print(url)
-    bot.sendPhoto(chat_id=update.message.chat_id,
-            photo=url)
-    print(str(locationArray))
-
-
+    bot.sendPhoto(chat_id=update.message.chat_id, photo=url)
 
 def gatherLoc(bot,chatId):
-    global gathering 
-    gathering = True
-    global locationArray 
-    locationArray= []
-    #t = Timer(30.0, giveLocs, [bot,chatId])
-    #t.start()
+    global locationArray
+    locationArray = []
 
-start_handler = CommandHandler('start', start)
-loc_handler = CommandHandler('me', askLoc)
-locadd_handler = MessageHandler(Filters.location, getLoc)
-makemap_handler = CommandHandler('now',giveLocs)
+def main():
+    updater = Updater(token='320338185:AAE2toXmrb-EKXPFNW_EoJoJ5CGY3tUzi0A')
 
-dispatcher = updater.dispatcher
+    start_handler = CommandHandler('start', start)
+    loc_handler = CommandHandler('me', askLoc)
+    locadd_handler = MessageHandler(Filters.location, getLoc)
+    makemap_handler = CommandHandler('now',giveLocs)
 
-dispatcher.add_handler(start_handler)
-dispatcher.add_handler(loc_handler)
-dispatcher.add_handler(locadd_handler)
-dispatcher.add_handler(makemap_handler)
+    dispatcher = updater.dispatcher
 
+    dispatcher.add_handler(start_handler)
+    dispatcher.add_handler(loc_handler)
+    dispatcher.add_handler(locadd_handler)
+    dispatcher.add_handler(makemap_handler)
 
-updater.start_polling()
+    updater.start_polling()
+
+if __name__ == "__main__":
+    main()
