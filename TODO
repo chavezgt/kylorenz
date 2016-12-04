@@ -1,4 +1,3 @@
-- Make it all a class
 - Logging
 - Change command names
 - Read tokens and API keys from secret files

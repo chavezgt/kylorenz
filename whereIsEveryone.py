@@ -1,117 +1,109 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.forcereply import ForceReply
 
-# Global variables
-baseUrl = 'https://maps.googleapis.com/maps/api/staticmap'
-key = 'AIzaSyBC9KPbyRovhnqIHhhLm460aphgzi65kxk'
+class FriendLocationBot:
+    def __init__(self):
+        self.baseUrl = 'https://maps.googleapis.com/maps/api/staticmap'
+        self.key = 'AIzaSyBC9KPbyRovhnqIHhhLm460aphgzi65kxk'
 
-locationArray = []
+        self.locationArray = []
 
-def start(bot, update):
-    bot.sendMessage(chat_id=update.message.chat_id,
-        text="Ok, I'll need to gather all of your locations, if you want"
-        + " to participate, send me the command /me")
-    gatherLoc(bot,update.message.chat_id)
+        start_handler = CommandHandler('start', self.start)
+        loc_handler = CommandHandler('me', self.askLoc)
+        makemap_handler = CommandHandler('now', self.giveLocs)
+        locadd_handler = MessageHandler(Filters.location, self.getLoc)
 
-def askLoc(bot, update):
-    user = update.message.from_user.first_name
-    
-    bot.sendMessage(chat_id=update.message.chat_id, 
-        reply_markup=ForceReply(force_reply=True, selective = True),
-        reply_to_message_id=update.message.message_id,
-        text="Send me your location, " + user)
+        self.updater = Updater(token='320338185:AAE2toXmrb-EKXPFNW_EoJoJ5CGY3tUzi0A')
+        dispatcher = self.updater.dispatcher
 
-def getLoc(bot, update):
-    userName = update.message.from_user.first_name
-    userId  = update.message.from_user.id
-    longitude = update.message.location.longitude
-    latitude  = update.message.location.latitude
+        dispatcher.add_handler(start_handler)
+        dispatcher.add_handler(loc_handler)
+        dispatcher.add_handler(locadd_handler)
+        dispatcher.add_handler(makemap_handler)
 
-    addLocToArr(userId, userName, longitude, latitude)
+    def run(self):
+        self.updater.start_polling()
 
-def addLocToArr(userId, userName, longitude, latitude):
-    global locationAarray
-    
-    locObj = {
-        "id" : userId,
-        "userName": userName,
-        "longitude" : longitude,
-        "latitude"  : latitude
-    }
+    def start(self, bot, update):
+        bot.sendMessage(chat_id=update.message.chat_id,
+            text="Ok, I'll need to gather all of your locations, if you want"
+            + " to participate, send me the command /me")
 
-    upD = [obj for obj in locationArray if obj["id"] == locObj["id"]]
+    def askLoc(self, bot, update):
+        user = update.message.from_user.first_name
         
-    if len(upD) == 0:
-        locationArray.append(locObj)
-        print("Added " + locObj["username"]
-            + " at location " + str(locObj["longitude"])
-            + ", " + str(locObj["latitude"]))
-    else:
-        upD[0]["latitude"] = locObj["latitude"]
-        upD[0]["longitude"] = locObj["longitude"]
-        print("Updated location of " + upD[0]["userName"]
-            + " to " + str(upD[0]["latitude"])
-            + ", " + str(upD[0]["longitude"]))
+        bot.sendMessage(chat_id=update.message.chat_id, 
+            reply_markup=ForceReply(force_reply=True, selective = True),
+            reply_to_message_id=update.message.message_id,
+            text="Send me your location, " + user)
+
+    def getLoc(self, bot, update):
+        userName = update.message.from_user.first_name
+        userId  = update.message.from_user.id
+        longitude = update.message.location.longitude
+        latitude  = update.message.location.latitude
+
+        locObj = {
+            "id" : userId,
+            "userName": userName,
+            "longitude" : longitude,
+            "latitude"  : latitude
+        }
+
+        upD = [obj for obj in self.locationArray if obj["id"] == locObj["id"]]
             
-    # TODO: Add error management in case it doesn't work
+        if len(upD) == 0:
+            self.locationArray.append(locObj)
+            print("Added " + locObj["userName"]
+                + " at location " + str(locObj["longitude"])
+                + ", " + str(locObj["latitude"]))
+        else:
+            upD[0]["latitude"] = locObj["latitude"]
+            upD[0]["longitude"] = locObj["longitude"]
+            print("Updated location of " + upD[0]["userName"]
+                + " to " + str(upD[0]["latitude"])
+                + ", " + str(upD[0]["longitude"]))
 
-def calculateCentrum():
-    maxY = max([obj["longitude"] for obj in locationArray])
-    minY = min([obj["longitude"] for obj in locationArray])
-    maxX = max([obj["latitude"] for obj in locationArray])
-    minX = min([obj["latitude"] for obj in locationArray])
-    centerY = (maxY + minY) / 2
-    centerX = (maxX + minX) / 2
-    return [centerX, centerY]
+    def giveLocs(self, bot, update):
+        url = self.constructUrl()
+        bot.sendPhoto(chat_id=update.message.chat_id, photo=url)
 
-def constructUrl():
-    url = baseUrl + '?'
-    url += 'size=1024x1024&'
-    center = calculateCentrum()
-    url += 'center='
-    url += str(center[0])
-    url += ','
-    url += str(center[1])
-    url += '&'
-    url += 'key=' + key
-    url += '&'
-
-    # Add all the longs and lats for each location object
-    for obj in locationArray:
-        url += 'markers=color:blue%7Clabel:'
-        url += str(obj["userName"])[0].upper()
-        url += '%7C'
-        url += str(obj["latitude"])
+    def constructUrl(self):
+        url = self.baseUrl + '?'
+        url += 'size=1024x1024&'
+        center = self.calculateCenter()
+        url += 'center='
+        url += str(center[0])
         url += ','
-        url += str(obj["longitude"])
+        url += str(center[1])
+        url += '&'
+        url += 'key=' + self.key
         url += '&'
 
-    return url
+        # Add all the longs and lats for each location object
+        for obj in self.locationArray:
+            url += 'markers=color:blue%7Clabel:'
+            url += str(obj["userName"])[0].upper()
+            url += '%7C'
+            url += str(obj["latitude"])
+            url += ','
+            url += str(obj["longitude"])
+            url += '&'
 
-def giveLocs(bot,update):
-    url=constructUrl()
-    bot.sendPhoto(chat_id=update.message.chat_id, photo=url)
+        return url
 
-def gatherLoc(bot,chatId):
-    global locationArray
-    locationArray = []
-
-def main():
-    updater = Updater(token='320338185:AAE2toXmrb-EKXPFNW_EoJoJ5CGY3tUzi0A')
-
-    start_handler = CommandHandler('start', start)
-    loc_handler = CommandHandler('me', askLoc)
-    locadd_handler = MessageHandler(Filters.location, getLoc)
-    makemap_handler = CommandHandler('now',giveLocs)
-
-    dispatcher = updater.dispatcher
-
-    dispatcher.add_handler(start_handler)
-    dispatcher.add_handler(loc_handler)
-    dispatcher.add_handler(locadd_handler)
-    dispatcher.add_handler(makemap_handler)
-
-    updater.start_polling()
+    def calculateCenter(self):
+        maxY = max([obj["longitude"] for obj in self.locationArray])
+        minY = min([obj["longitude"] for obj in self.locationArray])
+        maxX = max([obj["latitude"] for obj in self.locationArray])
+        minX = min([obj["latitude"] for obj in self.locationArray])
+        centerY = (maxY + minY) / 2
+        centerX = (maxX + minX) / 2
+        return (centerX, centerY)
 
 if __name__ == "__main__":
-    main()
+    try:
+        flb = FriendLocationBot()
+        flb.run()
+    except Exception:
+        print("Error") # lol
