@@ -8,6 +8,11 @@ class FriendLocationBot:
         self.baseUrl = 'https://maps.googleapis.com/maps/api/staticmap'
         self.key = googleKey
 
+        self.minLongitude = 13.082634
+        self.maxLongitude = 13.766688
+        self.minLatitude = 52.337776
+        self.maxLatitude = 52.676643
+
         self.locationArray = []
 
         start_handler = CommandHandler('start', self.start)
@@ -30,6 +35,7 @@ class FriendLocationBot:
         bot.sendMessage(chat_id=update.message.chat_id,
             text="Ok, I'll need to gather all of your locations, if you want"
             + " to participate, send me the command /me")
+        locationArray = []
 
     def askLoc(self, bot, update):
         user = update.message.from_user.first_name
@@ -45,6 +51,17 @@ class FriendLocationBot:
         longitude = update.message.location.longitude
         latitude  = update.message.location.latitude
 
+        if (longitude < self.minLongitude or longitude > self.maxLongitude
+            or latitude < self.minLatitude or latitude > self.maxLatitude):
+            text = "I didn't add the location you provided because it is outside of Berlin."
+            text += " Please give me a location in Berlin"
+
+            bot.sendMessage(chat_id=update.message.chat_id, 
+                reply_to_message_id=update.message.message_id,
+                text=text)
+
+            return
+
         locObj = {
             "id" : userId,
             "userName": userName,
@@ -56,15 +73,19 @@ class FriendLocationBot:
             
         if len(upD) == 0:
             self.locationArray.append(locObj)
-            print("Added " + locObj["userName"]
-                + " at location " + str(locObj["longitude"])
-                + ", " + str(locObj["latitude"]))
+            
+            text = "Added " + locObj["userName"]
+            text += " at location " + str(locObj["longitude"])
+            text += ", " + str(locObj["latitude"])
         else:
             upD[0]["latitude"] = locObj["latitude"]
             upD[0]["longitude"] = locObj["longitude"]
-            print("Updated location of " + upD[0]["userName"]
-                + " to " + str(upD[0]["latitude"])
-                + ", " + str(upD[0]["longitude"]))
+ 
+            text = "Updated location of " + upD[0]["userName"]
+            text += " to " + str(upD[0]["latitude"])
+            text += ", " + str(upD[0]["longitude"])
+
+        bot.sendMessage(chat_id=update.message.chat_id, text=text)
 
     def giveLocs(self, bot, update):
         url = self.constructUrl()
