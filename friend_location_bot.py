@@ -1,10 +1,12 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.forcereply import ForceReply
 
+import key_extractor
+
 class FriendLocationBot:
-    def __init__(self):
+    def __init__(self, telegramToken, googleKey):
         self.baseUrl = 'https://maps.googleapis.com/maps/api/staticmap'
-        self.key = 'AIzaSyBC9KPbyRovhnqIHhhLm460aphgzi65kxk'
+        self.key = googleKey
 
         self.locationArray = []
 
@@ -13,7 +15,7 @@ class FriendLocationBot:
         makemap_handler = CommandHandler('now', self.giveLocs)
         locadd_handler = MessageHandler(Filters.location, self.getLoc)
 
-        self.updater = Updater(token='320338185:AAE2toXmrb-EKXPFNW_EoJoJ5CGY3tUzi0A')
+        self.updater = Updater(token=telegramToken)
         dispatcher = self.updater.dispatcher
 
         dispatcher.add_handler(start_handler)
@@ -102,8 +104,6 @@ class FriendLocationBot:
         return (centerX, centerY)
 
 if __name__ == "__main__":
-    try:
-        flb = FriendLocationBot()
-        flb.run()
-    except Exception:
-        print("Error") # lol
+    flb = FriendLocationBot(key_extractor.getKey("telegram"),
+        key_extractor.getKey("google"))
+    flb.run()
