@@ -1,0 +1,7 @@
+- Make it all a class
+- Logging
+- Change command names
+- Read tokens and API keys from secret files
+- Cleaner URL construction
+- Remove hard-coded string (maybe?)
+- Rename methods and variables
