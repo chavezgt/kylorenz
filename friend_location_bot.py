@@ -8,10 +8,10 @@ class FriendLocationBot:
         self.baseUrl = 'https://maps.googleapis.com/maps/api/staticmap'
         self.key = googleKey
 
-        self.minLongitude = 13.082634
-        self.maxLongitude = 13.766688
-        self.minLatitude = 52.337776
-        self.maxLatitude = 52.676643
+        self.areas = {
+            "berlin": [13.082634, 13.766688, 52.337776, 52.676643],
+            "tu": [13.319462, 13.331812, 52.509221, 52.517618]
+        }
 
         self.locationArray = []
 
@@ -51,8 +51,13 @@ class FriendLocationBot:
         longitude = update.message.location.longitude
         latitude  = update.message.location.latitude
 
-        if (longitude < self.minLongitude or longitude > self.maxLongitude
-            or latitude < self.minLatitude or latitude > self.maxLatitude):
+        minLong = self.areas["berlin"][0]
+        maxLong = self.areas["berlin"][1]
+        minLat = self.areas["berlin"][2]
+        maxLat = self.areas["berlin"][3]
+
+        if (longitude < minLong or longitude > maxLong
+            or latitude < minLat or latitude > maxLat):
             text = "I didn't add the location you provided because it is outside of Berlin."
             text += " Please give me a location in Berlin"
 
@@ -88,13 +93,56 @@ class FriendLocationBot:
         bot.sendMessage(chat_id=update.message.chat_id, text=text)
 
     def giveLocs(self, bot, update):
-        url = self.constructUrl()
+        # Luis easter egg lolz
+        if "luis" in update.message.from_user.first_name.lower():
+            bot.sendMessage(chat_id=update.message.chat_id,
+                reply_to_message_id=update.message.message_id,
+                text="Go away Luis. You have no friends")    
+            return
+
+        args = update.message.text.split(" ")
+
+        availableLocs = []
+
+        if len(args) > 1:
+            if args[1].lower() in self.areas.keys():
+                area = self.areas[args[1].lower()]
+                
+                minLong = area[0]
+                maxLong = area[1]
+                minLat = area[2]
+                maxLat = area[3]
+
+                availableLocs = []
+
+                for loc in self.locationArray:
+                    longitude = loc["longitude"]
+                    latitude = loc["latitude"]
+
+                    if (longitude >= minLong and longitude <= maxLong
+                        and latitude >= minLat and latitude <= maxLat):
+                        availableLocs.append(loc)
+
+                if len(availableLocs) == 0:
+                    bot.sendMessage(chat_id=update.message.chat_id, 
+                        reply_to_message_id=update.message.message_id,
+                        text="None of your friends are currently in this area")    
+                    return            
+            else:
+                bot.sendMessage(chat_id=update.message.chat_id, 
+                    reply_to_message_id=update.message.message_id,
+                    text="I don't know this area")
+                return
+        else:
+            availableLocs = self.locationArray
+
+        url = self.constructUrl(availableLocs)
         bot.sendPhoto(chat_id=update.message.chat_id, photo=url)
 
-    def constructUrl(self):
+    def constructUrl(self, locations):
         url = self.baseUrl + '?'
         url += 'size=1024x1024&'
-        center = self.calculateCenter()
+        center = self.calculateCenter(locations)
         url += 'center='
         url += str(center[0])
         url += ','
@@ -115,13 +163,15 @@ class FriendLocationBot:
 
         return url
 
-    def calculateCenter(self):
-        maxY = max([obj["longitude"] for obj in self.locationArray])
-        minY = min([obj["longitude"] for obj in self.locationArray])
-        maxX = max([obj["latitude"] for obj in self.locationArray])
-        minX = min([obj["latitude"] for obj in self.locationArray])
+    def calculateCenter(self, locations):
+        maxY = max([obj["longitude"] for obj in locations])
+        minY = min([obj["longitude"] for obj in locations])
+        maxX = max([obj["latitude"] for obj in locations])
+        minX = min([obj["latitude"] for obj in locations])
+        
         centerY = (maxY + minY) / 2
         centerX = (maxX + minX) / 2
+        
         return (centerX, centerY)
 
 if __name__ == "__main__":
