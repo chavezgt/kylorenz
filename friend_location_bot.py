@@ -152,7 +152,7 @@ class FriendLocationBot:
         url += '&'
 
         # Add all the longs and lats for each location object
-        for obj in self.locationArray:
+        for obj in locations:
             url += 'markers=color:blue%7Clabel:'
             url += str(obj["userName"])[0].upper()
             url += '%7C'
