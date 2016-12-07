@@ -93,13 +93,6 @@ class FriendLocationBot:
         bot.sendMessage(chat_id=update.message.chat_id, text=text)
 
     def giveLocs(self, bot, update):
-        # Luis easter egg lolz
-        if "luis" in update.message.from_user.first_name.lower():
-            bot.sendMessage(chat_id=update.message.chat_id,
-                reply_to_message_id=update.message.message_id,
-                text="Go away Luis. You have no friends")    
-            return
-
         args = update.message.text.split(" ")
 
         availableLocs = []
@@ -138,6 +131,12 @@ class FriendLocationBot:
 
         url = self.constructUrl(availableLocs)
         bot.sendPhoto(chat_id=update.message.chat_id, photo=url)
+
+        # Apology to Luis
+        if "luis" in update.message.from_user.first_name.lower():
+            bot.sendMessage(chat_id=update.message.chat_id,
+                reply_to_message_id=update.message.message_id,
+                text="Sorry for being rude to you Luis. Will you forgive me?")
 
     def constructUrl(self, locations):
         url = self.baseUrl + '?'
