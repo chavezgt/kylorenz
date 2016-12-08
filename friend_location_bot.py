@@ -35,7 +35,7 @@ class FriendLocationBot:
         bot.sendMessage(chat_id=update.message.chat_id,
             text="Ok, I'll need to gather all of your locations, if you want"
             + " to participate, send me the command /me")
-        locationArray = []
+        self.locationArray = []
 
     def askLoc(self, bot, update):
         user = update.message.from_user.first_name
@@ -105,8 +105,6 @@ class FriendLocationBot:
                 maxLong = area[1]
                 minLat = area[2]
                 maxLat = area[3]
-
-                availableLocs = []
 
                 for loc in self.locationArray:
                     longitude = loc["longitude"]
