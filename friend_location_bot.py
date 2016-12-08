@@ -150,8 +150,9 @@ class FriendLocationBot:
 
         # Add all the longs and lats for each location object
         for obj in locations:
-            url += 'markers=color:blue%7Clabel:'
-            url += str(obj["userName"])[0].upper()
+            url += 'markers=icon:https://chart.googleapis.com/chart?chst=d_bubble_text_small%26chld=bbT%257C'
+            url += str(obj["userName"])
+            url += '%257CB8EDFF%257C000000'
             url += '%7C'
             url += str(obj["latitude"])
             url += ','
