@@ -1,11 +1,19 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.forcereply import ForceReply
 
+from socket import socket
+
+import socket
+import json
 import key_extractor
 
 class FriendLocationBot:
     def __init__(self, telegramToken, googleKey):
-        self.baseUrl = 'https://maps.googleapis.com/maps/api/staticmap'
+        self.backend_addr = "archoniii.ddns.net"
+        self.backend_port = 30000
+        self.buffer_size = 4096
+
+        self.baseUrl = "https://maps.googleapis.com/maps/api/staticmap"
         self.key = googleKey
 
         self.areas = {
@@ -135,6 +143,35 @@ class FriendLocationBot:
             bot.sendMessage(chat_id=update.message.chat_id,
                 reply_to_message_id=update.message.message_id,
                 text="Sorry for being rude to you Luis. Will you forgive me?")
+
+    # Unused altervative to giveLocs for use with The Backend
+    def giveLocs2(self, bot, update):
+        args = update.message.text.split(" ")
+
+        availableLocs = []
+
+        # Pull locations from The Backend
+        with socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            # We need to figure out how to populate "usernames"
+            query = {"query" : "location_pull", "usernames" : []}
+
+            try:
+                s.connect((self.backend_addr, self.backend_port))
+                s.send(bytearray(json.dumps(query), "utf-8"))
+                response = json.loads(s.recv(self.buffer_size))
+                availableLocs = response["locations"]
+            except:
+                # For now
+                pass
+
+        if len(availableLocs) == 0:
+            bot.sendMessage(chat_id=update.message.chat_id, 
+                reply_to_message_id=update.message.message_id,
+                text="None of your friends are currently in this area")    
+            return
+
+        url = self.constructUrl(availableLocs)
+        bot.sendPhoto(chat_id=update.message.chat_id, photo=url)
 
     def constructUrl(self, locations):
         url = self.baseUrl + '?'
